@@ -57,6 +57,9 @@ try {
     Set-Content -LiteralPath (Join-Path $faultSource 'still-safe.txt') -Value 'must-survive' -NoNewline
     & $scriptPath -SourcePath $faultSource -DestinationRoot $destinationRoot -FaultInjectionStage BeforeJunction -NonInteractive -Confirm:$false
     Assert-True ($LASTEXITCODE -ne 0) 'Injected migration failure unexpectedly succeeded.'
+    # The non-zero exit code is expected and asserted above; clear it so this
+    # integration harness itself succeeds when all recovery assertions pass.
+    $global:LASTEXITCODE = 0
     $faultTarget = Join-Path $destinationRoot 'AppDataMigrateToolTests\FaultSource'
     $faultBackup = "$faultSource.bak"
     Assert-True (Test-Path -LiteralPath $faultSource -PathType Container) 'Junction failure did not restore the original source path.'
