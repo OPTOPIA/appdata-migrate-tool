@@ -37,3 +37,5 @@ Linked -> RollbackCopying -> RollbackVerified -> RolledBack
 GitHub Actions 的 Windows runner 在 `C:\AppDataMigrateToolTests` 中运行隔离的真实 NTFS 集成测试。它验证 Junction 创建、目标数据可见、迁移后新增文件在回滚后仍存在、`.bak` 与目标默认保留，以及清理仅删除清单绑定的 `.bak`。测试使用固定的专用根目录，并在 `finally` 中清理它；不得将真实用户路径用于此测试。
 
 集成测试还使用隐藏的 `-FaultInjectionStage BeforeJunction` 钩子模拟 Junction 创建前失败，验证脚本会恢复源目录并保留复制目标。该参数仅用于自动化测试，正常操作不得使用。
+
+集成测试还会独占锁定一个测试文件并尝试迁移，验证 robocopy 失败时源目录和锁定文件仍完整保留。这是错误路径的保护性测试，不会重试或删除真实用户文件。

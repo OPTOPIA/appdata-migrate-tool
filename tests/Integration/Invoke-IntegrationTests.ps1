@@ -67,6 +67,23 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $faultSource 'still-safe.txt') -PathType Leaf) 'Junction failure lost source data.'
     Assert-True (-not (Test-Path -LiteralPath $faultBackup)) 'Junction failure left an unexpected backup after source restoration.'
     Assert-True (Test-Path -LiteralPath (Join-Path $faultTarget 'still-safe.txt') -PathType Leaf) 'Junction failure lost copied target data.'
+
+    $lockedSource = Join-Path $testRoot 'LockedSource'
+    New-Item -ItemType Directory -Path $lockedSource -Force | Out-Null
+    $lockedFile = Join-Path $lockedSource 'in-use.txt'
+    Set-Content -LiteralPath $lockedFile -Value 'must-remain-safe' -NoNewline
+    $lockedHandle = [IO.File]::Open($lockedFile, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try {
+        & $scriptPath -SourcePath $lockedSource -DestinationRoot $destinationRoot -NonInteractive -Confirm:$false
+        Assert-True ($LASTEXITCODE -ne 0) 'Migration with an exclusively locked file unexpectedly succeeded.'
+    }
+    finally {
+        $lockedHandle.Dispose()
+        # The non-zero exit is expected and asserted while the lock was held.
+        $global:LASTEXITCODE = 0
+    }
+    Assert-True (Test-Path -LiteralPath $lockedSource -PathType Container) 'A locked-file migration removed the source directory.'
+    Assert-True (Test-Path -LiteralPath $lockedFile -PathType Leaf) 'A locked-file migration lost source data.'
     Write-Host 'NTFS migration, rollback, and cleanup integration test passed.' -ForegroundColor Green
 }
 finally {
