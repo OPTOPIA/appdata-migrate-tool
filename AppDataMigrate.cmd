@@ -3,17 +3,17 @@ setlocal
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Please run this script as Administrator.
-    echo Right-click this file and choose "Run as administrator".
+    echo 请以管理员身份运行此脚本。
+    echo 请右键单击此文件并选择“以管理员身份运行”。
     echo.
     pause
     exit /b 1
 )
 
-set /p "SourcePath=Directory to migrate, for example C:\Users\YourName\AppData\Local: "
+set /p "SourcePath=请输入要迁移的目录，例如 C:\Users\YourName\AppData\Local: "
 
 if not exist "%SourcePath%\" (
-    echo Directory does not exist: %SourcePath%
+    echo 目录不存在: %SourcePath%
     pause
     exit /b 1
 )
@@ -23,11 +23,11 @@ set "ExitCode=%errorlevel%"
 
 echo.
 if not "%ExitCode%"=="0" (
-    echo Migration failed. Exit code: %ExitCode%
+    echo 迁移失败。退出码: %ExitCode%
     pause
     exit /b %ExitCode%
 )
 
-echo Migration completed.
+echo 迁移完成。
 pause
 exit /b 0

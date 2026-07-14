@@ -151,7 +151,7 @@ Preflight -> Copying -> Verified -> SourceBackedUp -> Linked -> CleanupScheduled
 - [x] 提供 `Migrate`、`Rollback`、`Status`、`Cleanup` 四类明确操作，并用参数集约束组合。
 - [x] `Status` 展示 Junction 目标、备份、清单、清理任务和异常状态。
 - [x] `Cleanup` 只删除已验证且与清单匹配的备份，并支持取消计划任务。
-- [~] 统一中英文策略；当前文档为中文、脚本错误文本为稳定英文，尚未实现中文交互文本或结构化错误对象。
+- [x] 统一中英文策略：README 与双击 `.cmd` 入口使用中文；PowerShell 核心错误文本使用稳定英文并配合数值退出码，便于自动化解析。
 - [x] 精简 CMD，业务校验集中在 PowerShell 核心脚本。
 
 验收标准：

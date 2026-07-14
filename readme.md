@@ -91,3 +91,7 @@ C:\Users\Alice\AppData\Local.bak
 | 5 | robocopy 失败 |
 | 6 | 复制验证失败 |
 | 7 | 用户取消 |
+
+## 语言策略
+
+面向用户的 README 与双击 `.cmd` 入口使用中文。PowerShell 核心的错误文本保持英文，并搭配稳定的数值退出码，便于 robocopy 日志、自动化任务和故障排查工具可靠解析。
