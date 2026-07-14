@@ -1,136 +1,93 @@
+# AppData 安全迁移工具
 
+在 Windows 上把 C 盘用户目录复制到指定的 NTFS 目标盘，并以 NTFS Junction 保持原路径可用的 PowerShell 工具。
 
-# AppData 安全迁移工具（支持一键回滚）
+## 安全模型
 
-一套用于 **将 C 盘 AppData / 任意用户目录安全迁移到 D 盘** 的 PowerShell 工具，  
-采用 **先复制 → 备份 → Junction 重定向 → 延迟清理** 的方式，**可随时回滚**。    
+迁移按以下顺序执行：复制 → 验证 → 源目录改名为 `.bak` → 创建 Junction。每次迁移会在目标根目录的 `.AppDataMigrateState` 创建清单和 robocopy 日志，供状态查询、回滚和清理校验使用。
 
-> #### 【需自行甄别文件夹是否可迁移】
+回滚不会直接把旧 `.bak` 覆盖回去：它先将 D 盘的当前数据复制到新的恢复目录并验证，再移除 Junction。因此迁移后新增或修改的数据不会因正常回滚而丢失。回滚完成后，旧 `.bak` 和 D 盘目标会保留，等待人工确认后清理。
 
----
+## 要求
 
-## ✨ 功能特点
+- Windows PowerShell 5.1 或更高版本
+- 以管理员身份运行
+- 源目录位于 C 盘，目标卷为 NTFS
+- 迁移期间关闭正在使用该目录的程序
 
-- ✅ **自动创建 NTFS Junction**，对程序完全透明
-- ✅ **源目录 `.bak` 备份**，**两天后自动清理**
-- ✅ **一键回滚**：1 秒恢复原始状态
-- ✅ **自动校验**：管理员权限、路径合法性、系统目录
-- ✅ **安全增强**：回滚前验证 `.bak` 不是 Junction（防止嵌套崩溃）
-- ✅ **日志支持**：robocopy 操作自动记录日志（排查问题神兵利器）
+`C:\Windows`、`C:\Program Files`、`C:\Program Files (x86)`、`C:\ProgramData`、`C:\Users\Default` 和 `C:\Users\Public` 被禁止操作。
 
----
+## 使用方式
 
-## 📁 文件结构
+双击入口：
 
-```text
-AppDataMigrate/
-├─ AppDataMigrate.ps1      # 主迁移 / 回滚脚本（核心）
-├─ AppDataMigrate.cmd      # 迁移脚本
-├─ AppDataRollback.cmd     # 回滚脚本
-└─ README.md               
+- `AppDataMigrate.cmd`：迁移
+- `AppDataRollback.cmd`：回滚
+
+或在管理员 PowerShell 中运行：
+
+```powershell
+# 先预览（不执行修改）
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -WhatIf
+
+# 迁移到默认目标 D:\C_Data_Redirect
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local'
+
+# 使用逐文件 SHA-256 强校验（大型目录会更慢）
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -VerifyHash
+
+# 指定其他 NTFS 目标根目录；-NonInteractive 仅适用于已审阅的自动化任务
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -DestinationRoot 'E:\RedirectedData' -NonInteractive
+
+# 查看状态（只读）
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -Status
+
+# 无损回滚（保留 D 盘目标和 .bak）
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -Rollback
+
+# 在确认应用正常、完成独立备份后删除 .bak
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -Cleanup
+
+# 只取消已登记的计划清理，保留 .bak
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -Cleanup -CancelBackupCleanup
+
+# 明确选择在两天后自动清理 .bak（仍受清单校验约束）
+.\AppDataMigrate.ps1 -SourcePath 'C:\Users\Alice\AppData\Local' -ScheduleBackupCleanup
 ```
 
----
+## 目录映射
 
-## 🚀 使用方法
-
-### 一、迁移目录（推荐方式）
-1. **双击** `AppDataMigrate.cmd`
-2. 按提示输入**完整路径**（例如：`C:\Users\YourName\AppData\Local`）
-   - ✅ 正确格式：`C:\Users\YourName\AppData\Local`
-   - ❌ 错误格式：`C:\Users\YourName\AppData\Local\`（末尾反斜杠）
-3. 按脚本提示 **逐条确认** 每一步操作
-
-> ✅ 迁移后效果：
-> - 原路径（`C:\...`）变为 Junction（指向 D 盘）
-> - 实际数据已迁移到 `D:\C_Data_Redirect\...`
-> - 程序无需重新配置
-
----
-
-### 二、回滚目录（恢复到 C 盘）
-1. **双击** `AppDataRollback.cmd`
-2. 按提示输入**相同目录路径**（例如：`C:\Users\YourName\AppData\Local`）
-3. 按脚本提示 **逐条确认** 回滚操作
-
-> ✅ 回滚后效果：
-> - 原路径恢复为原始目录（不再指向 D 盘）
-> - 源目录（C 盘）恢复
-> - **D 盘迁移数据可选删除**（脚本会询问是否删除）
-
----
-
-## 📌 迁移规则说明
-
-| 类型 | 规则 | 示例 |
-|------|------|------|
-| ✅ **允许迁移** | 仅限用户数据目录 | `C:\Users\*\AppData``C:\Users\*\Documents` |
-| ❌ **禁止迁移** | 系统核心目录 | `C:\Windows``C:\Program Files``C:\ProgramData` |
-| 📂 **目标路径** | 统一位于 D 盘 | `D:\C_Data_Redirect\Users\YourName\AppData\Local` |
-| 🧹 **清理机制** | 源目录重命名为 `.bak`2 天后自动清理 | `C:\Users\...\AppData` → `C:\Users\...\AppData.bak` |
-
----
-
-## ⚠️ 重要注意事项（必读）
-
-1. **必须管理员身份运行**：双击 `.cmd` 文件时，系统会自动检查权限
-   - 若无管理员权限，会提示 "请以管理员身份运行"
-2. **不要在程序运行中迁移**：如浏览器、微信等正在使用的目录
-3. **`.bak` 备份已存在** → 脚本会自动终止，避免覆盖
-4. **系统目录禁止迁移**：脚本会直接退出，不给确认
-5. **回滚前确保程序未运行**：避免文件占用导致失败
-6. **回滚后 D 盘数据**：脚本会询问是否删除（默认保留，需手动确认）
-
----
-
-## 📝 为什么这个工具安全？
-
-| 安全机制 | 实现方式 | 优势 |
-|----------|----------|------|
-| **系统目录硬禁止** | 直接退出（不给确认） | 防止迁移 `C:\ProgramData` 导致系统崩溃 |
-| **三重确认** | 仅对高风险目录（如 ProgramData） | 避免用户误操作 |
-| **备份机制** | 源目录重命名为 `.bak` | 2 天后自动清理，避免空间浪费 |
-| **回滚验证** | 验证 `.bak` 不是 Junction | 防止 "Junction → Junction" 嵌套地狱 |
-| **日志支持** | robocopy 自动记录日志 | 未来排查问题神兵利器 |
-
----
-
-## 💡 使用示例
-
-### ✅ 正确迁移（用户数据）
 ```text
-1. 双击 AppDataMigrate.cmd
-2. 输入路径：C:\Users\John\AppData\Local
-3. 确认所有提示 → 迁移完成
+C:\Users\Alice\AppData\Local
+  -> D:\C_Data_Redirect\Users\Alice\AppData\Local
+
+C:\Users\Alice\AppData\Local.bak
+  -> 迁移前备份（默认保留）
 ```
 
-### ❌ 禁止迁移（系统目录）
-```text
-1. 双击 AppDataMigrate.cmd
-2. 输入路径：C:\ProgramData
-3. 脚本立即退出：❌ 检测到硬禁止目录（C:\ProgramData）！
-```
+## 限制与注意事项
 
-### ✅ 安全回滚
-```text
-1. 双击 AppDataRollback.cmd
-2. 输入路径：C:\Users\John\AppData\Local
-3. 确认回滚 → 1 秒恢复原始目录
-4. 脚本询问：是否删除 D 盘数据？（输入 Y 删除）
-```
+- 当前复制的元数据为数据、属性和时间戳（`/COPY:DAT`）；不复制 ACL、所有者或审计信息。
+- 默认验证检查文件相对路径、数量、大小和最后写入时间；传入 `-VerifyHash` 可增加逐文件 SHA-256 校验，但大型目录会更慢。
+- 默认不自动删除 `.bak`。只有显式传入 `-ScheduleBackupCleanup` 才会创建两天后执行的清理任务；任务仍受清单校验，并在完成后注销。
+- `-Cleanup -RemoveDestination` 当前会明确拒绝执行；D 盘目标必须人工保留，直到有可验证的目标清理方案。
+- 不要把此工具用于系统目录，也不要在没有独立备份的情况下处理唯一数据。
 
----
+详细设计见 [docs/DESIGN.md](docs/DESIGN.md)，异常恢复步骤见 [docs/RECOVERY.md](docs/RECOVERY.md)，后续路线见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
-## 📌 免责声明
+## 许可证
 
-> 本工具仅用于个人数据迁移优化，**不建议用于系统目录**。  
-> 使用前请确认已理解 NTFS Junction 行为，并自行承担使用风险。  
+本项目采用 [Apache License 2.0](LICENSE)。
 
----
+## 退出码
 
-## 💡 最后建议
-
-1. **先用测试目录验证**（如 `C:\TestAppData`）→ 再操作真实数据
-2. **不要直接迁移 AppData** → 先用 `C:\Users\用户名\AppData\Local` 测试
-3. **回滚后删除 D 盘数据** → 保留数据可选，但建议删除以避免混淆
-4. **查看 robocopy 日志** → 迁移失败时查看 `C:\Users\用户名\AppData\Local\Temp\robocopy_*.log`
+| 退出码 | 含义 |
+| --- | --- |
+| 0 | 成功或 `-WhatIf` 未执行 |
+| 1 | 未分类错误 |
+| 2 | 权限、路径或文件系统前置条件错误 |
+| 3 | 工具或可用空间前置条件错误 |
+| 4 | 迁移状态、清单或安全边界错误 |
+| 5 | robocopy 失败 |
+| 6 | 复制验证失败 |
+| 7 | 用户取消 |

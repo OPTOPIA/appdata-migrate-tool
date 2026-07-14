@@ -1,0 +1,22 @@
+name: Verify PowerShell
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester 4
+        shell: powershell
+        run: |
+          Install-Module Pester -RequiredVersion 4.10.1 -Force -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Verify
+        shell: powershell
+        run: .\scripts\verify.ps1
+      - name: NTFS integration test
+        shell: powershell
+        run: .\tests\Integration\Invoke-IntegrationTests.ps1 -ProjectRoot $PWD
