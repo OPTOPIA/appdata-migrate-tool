@@ -48,6 +48,10 @@ Describe 'AppDataMigrate pure path and manifest rules' {
         Test-PathEqualsOrChild -Path 'C:\Windows.old' -BasePath 'C:\Windows' | Should Be $false
     }
 
+    It 'rejects destination roots nested within the source without duplicate parameter binding' {
+        { Assert-SafeDestinationRoot -Source 'C:\Users\Alice\Data' -Root 'C:\Users\Alice\Data\Redirected' } | Should Throw
+    }
+
     It 'generates a stable manifest identity regardless of source path casing' {
         $first = Get-MigrationId 'C:\Users\Alice\AppData\Local'
         $second = Get-MigrationId 'c:\users\alice\appdata\local'

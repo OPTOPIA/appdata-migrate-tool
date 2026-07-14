@@ -167,7 +167,7 @@ function Assert-SafeDestinationRoot {
     )
 
     $normalizedRoot = Get-NormalizedPathForComparison $Root
-    if (Test-PathEqualsOrChild -Path $normalizedRoot -BasePath $Source -or Test-PathEqualsOrChild -Path $Source -BasePath $normalizedRoot) {
+    if ((Test-PathEqualsOrChild -Path $normalizedRoot -BasePath $Source) -or (Test-PathEqualsOrChild -Path $Source -BasePath $normalizedRoot)) {
         throw 'Destination root must not contain the source path or be contained by it.'
     }
     $drive = Split-Path -Path $normalizedRoot -Qualifier
