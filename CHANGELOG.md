@@ -8,6 +8,7 @@
 - Added stable process exit codes, scheduled-cleanup status, and scheduled-cleanup cancellation.
 - Added Pester safety-baseline tests, a verification script, Windows GitHub Actions CI, and recovery/design documentation.
 - Added the Apache-2.0 license.
+- Made PSScriptAnalyzer warnings visible but non-blocking; Error-level findings remain CI blockers.
 
 ## Unreleased
 

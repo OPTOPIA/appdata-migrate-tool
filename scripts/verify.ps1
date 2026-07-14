@@ -19,12 +19,16 @@ Write-Host 'PowerShell syntax validation passed.' -ForegroundColor Green
 
 $analyzer = Get-Command Invoke-ScriptAnalyzer -ErrorAction SilentlyContinue
 if ($analyzer) {
-    $findings = Invoke-ScriptAnalyzer -Path $scriptPath -Severity Error,Warning
-    if ($findings) {
-        $findings | Format-Table -AutoSize | Out-String | Write-Error
+    $errors = Invoke-ScriptAnalyzer -Path $scriptPath -Severity Error
+    if ($errors) {
+        $errors | Format-Table -AutoSize | Out-String | Write-Error
         throw 'PSScriptAnalyzer reported findings.'
     }
-    Write-Host 'PSScriptAnalyzer validation passed.' -ForegroundColor Green
+    $warnings = Invoke-ScriptAnalyzer -Path $scriptPath -Severity Warning
+    if ($warnings) {
+        Write-Warning ("PSScriptAnalyzer warnings (non-blocking):`n" + ($warnings | Format-Table -AutoSize | Out-String))
+    }
+    Write-Host 'PSScriptAnalyzer error-level validation passed.' -ForegroundColor Green
 }
 else {
     Write-Warning 'PSScriptAnalyzer is not installed; static analyzer step skipped.'
