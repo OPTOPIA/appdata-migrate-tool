@@ -1,30 +1,27 @@
 @echo off
-REM ¼ì²éÊÇ·ñÒÔ¹ÜÀíÔ±Éí·İÔËĞĞ
+setlocal
+
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ÇëÒÔ¹ÜÀíÔ±Éí·İÔËĞĞ´Ë½Å±¾£¡
-    echo ÓÒ¼üµã»÷´ËÎÄ¼ş -> Ñ¡Ôñ "ÒÔ¹ÜÀíÔ±Éí·İÔËĞĞ"
+    echo è¯·ä»¥ç®¡ç†å‘˜èº«ä»½è¿è¡Œæ­¤è„šæœ¬ã€‚
+    echo è¯·å³é”®å•å‡»æ­¤æ–‡ä»¶å¹¶é€‰æ‹©â€œä»¥ç®¡ç†å‘˜èº«ä»½è¿è¡Œâ€ã€‚
     echo.
-    echo ËµÃ÷£ºWindows 10/11 ¿ÉÄÜĞèÒªÊÖ¶¯ÆôÓÃ¹ÜÀíÔ±Ñ¡Ïî
     pause
-    exit /b
+    exit /b 1
 )
 
-REM ÌáÊ¾ÓÃ»§ÊäÈëÒª»Ø¹öµÄÄ¿Â¼
-set /p "SourcePath=ÇëÊäÈëÒª»Ø¹öµÄÄ¿Â¼Â·¾¶ (ÀıÈç: C:\Users\YourName\AppData\Local): "
+set /p "SourcePath=è¯·è¾“å…¥è¦å›æ»šçš„ç›®å½•ï¼Œä¾‹å¦‚ C:\Users\YourName\AppData\Local: "
 
-REM ÑéÖ¤ÊäÈëÂ·¾¶
-if not exist "%SourcePath%" (
-    echo ? Ä¿Â¼²»´æÔÚ: %SourcePath%
-    echo ÇëÈ·ÈÏÂ·¾¶ÊÇ·ñÕıÈ·£¨×¢Òâ£º²»Òª°üº¬Ä©Î²·´Ğ±¸Ü£©
-    pause
-    exit /b
-)
-
-REM Ö´ĞĞ»Ø¹ö½Å±¾
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0AppDataMigrate.ps1" -SourcePath "%SourcePath%" -Rollback
+set "ExitCode=%errorlevel%"
 
-REM ±£³Ö´°¿Ú´ò¿ª£¬ÏÔÊ¾Íê³ÉĞÅÏ¢
 echo.
-echo ? »Ø¹öÁ÷³ÌÒÑÍê³É£¡Çë°´ÈÎÒâ¼ü¹Ø±Õ´°¿Ú
+if not "%ExitCode%"=="0" (
+    echo å›æ»šå¤±è´¥ã€‚é€€å‡ºç : %ExitCode%
+    pause
+    exit /b %ExitCode%
+)
+
+echo å›æ»šå®Œæˆã€‚
 pause
+exit /b 0
