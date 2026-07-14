@@ -1,12 +1,12 @@
-# AppData 安全迁移工具
+# AppData 安全迁移工具（支持安全回滚）
 
-在 Windows 上把 C 盘用户目录复制到指定的 NTFS 目标盘，并以 NTFS Junction 保持原路径可用的 PowerShell 工具。
+在 Windows 上将 C 盘 AppData 或其他用户目录复制到指定的 NTFS 目标盘，并以 NTFS Junction 保持原路径可用的 PowerShell 工具。
 
 ## 安全模型
 
 迁移按以下顺序执行：复制 → 验证 → 源目录改名为 `.bak` → 创建 Junction。每次迁移会在目标根目录的 `.AppDataMigrateState` 创建清单和 robocopy 日志，供状态查询、回滚和清理校验使用。
 
-回滚不会直接把旧 `.bak` 覆盖回去：它先将 D 盘的当前数据复制到新的恢复目录并验证，再移除 Junction。因此迁移后新增或修改的数据不会因正常回滚而丢失。回滚完成后，旧 `.bak` 和 D 盘目标会保留，等待人工确认后清理。
+回滚不会直接把旧 `.bak` 覆盖回去：它先将 D 盘当前数据复制到新的恢复目录并验证，再移除 Junction。因此迁移后新增或修改的数据不会因正常回滚而丢失。回滚完成后，旧 `.bak` 和 D 盘目标会保留，等待人工确认后清理。
 
 ## 要求
 
@@ -72,6 +72,7 @@ C:\Users\Alice\AppData\Local.bak
 - 默认不自动删除 `.bak`。只有显式传入 `-ScheduleBackupCleanup` 才会创建两天后执行的清理任务；任务仍受清单校验，并在完成后注销。
 - `-Cleanup -RemoveDestination` 当前会明确拒绝执行；D 盘目标必须人工保留，直到有可验证的目标清理方案。
 - 不要把此工具用于系统目录，也不要在没有独立备份的情况下处理唯一数据。
+- 建议先在独立测试目录（例如 `C:\TestAppData`）验证，再迁移真实用户目录。
 
 详细设计见 [docs/DESIGN.md](docs/DESIGN.md)，异常恢复步骤见 [docs/RECOVERY.md](docs/RECOVERY.md)，后续路线见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)。
 
